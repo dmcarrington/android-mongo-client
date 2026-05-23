@@ -1,17 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sextant silhouette. Designed to fit inside the adaptive-icon safe zone
+  (centre 72dp of the 108dp viewport):
+    - triangular frame outline (evenOdd cut-out)
+    - diagonal index arm sweeping from the apex to the lower-right of the arc
+    - solid pivot dot at the apex
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Frame: outer triangle with an inner triangle cut out via evenOdd. -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,22
-                         C44,38 38,54 54,86
-                         C70,54 64,38 54,22 Z" />
+        android:fillType="evenOdd"
+        android:pathData="M54,30 L22,82 L86,82 Z M54,50 L38,78 L70,78 Z" />
+
+    <!-- Index arm: thin diagonal from apex to lower-right corner of frame. -->
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="2"
-        android:pathData="M54,86 L54,94" />
+        android:pathData="M52,32 L57,32 L82,80 L77,82 Z" />
+
+    <!-- Pivot dot at the apex. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,38 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 Z" />
 </vector>

@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "mongo-client"
+rootProject.name = "sextant"
 include(":app")

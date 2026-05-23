@@ -1,9 +1,11 @@
 package com.dmc.mongoclient
 
 import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
 import org.xbill.DNS.ResolverConfig
 import org.xbill.DNS.config.AndroidResolverConfigProvider
 
+@HiltAndroidApp
 class MongoClientApp : Application() {
     override fun onCreate() {
         super.onCreate()

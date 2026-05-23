@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
 }
 
 android {
@@ -14,6 +16,23 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0-spike"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            val keystorePath = signingProperty("MONGO_CLIENT_KEYSTORE_PATH")
+            if (!keystorePath.isNullOrBlank()) {
+                storeFile = file(keystorePath)
+                storePassword = signingProperty("MONGO_CLIENT_KEYSTORE_PASSWORD")
+                keyAlias = signingProperty("MONGO_CLIENT_KEY_ALIAS")
+                keyPassword = signingProperty("MONGO_CLIENT_KEY_PASSWORD")
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+            }
+        }
     }
 
     buildTypes {
@@ -21,11 +40,16 @@ android {
             isMinifyEnabled = false
         }
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // Falls back to unsigned (which fails install) rather than silently
+            // debug-signing — surfaces missing-keystore mistakes loudly.
+            signingConfig = signingConfigs.getByName("release")
+                .takeIf { it.storeFile != null }
         }
     }
 
@@ -71,10 +95,30 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material3.adaptive)
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.navigation.compose)
+
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 
     implementation(libs.mongodb.driver.kotlin.coroutine) {
         // JVM-only native libs cause R8/packaging friction on Android.
@@ -103,3 +147,8 @@ dependencies {
     // Netty's own NIO+SSL plumbing avoids the broken path entirely.
     implementation(libs.netty.handler)
 }
+
+/** Reads a signing credential from -P / gradle.properties first, env var as fallback. */
+fun signingProperty(name: String): String? =
+    (project.findProperty(name) as? String)?.takeIf { it.isNotBlank() }
+        ?: System.getenv(name)?.takeIf { it.isNotBlank() }
