@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Play Store listing icon. 512x512, blue-grey background, white sextant
+  silhouette (frame outline + diagonal index arm + pivot dot). Mirrors the
+  in-app adaptive icon design but scaled up to fill more of the canvas since
+  the listing icon has no safe-zone constraint.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#37474F"/>
+
+  <!-- Frame: outer triangle with inner triangle cut out via even-odd fill rule. -->
+  <path fill="#FFFFFF" fill-rule="evenodd"
+        d="M256,100 L96,412 L416,412 Z
+           M256,220 L180,392 L332,392 Z"/>
+
+  <!-- Index arm: thin diagonal sweeping from apex to lower-right of the frame. -->
+  <path fill="#FFFFFF"
+        d="M246,110 L272,110 L404,400 L378,412 Z"/>
+
+  <!-- Pivot dot at the apex. -->
+  <circle fill="#FFFFFF" cx="256" cy="140" r="26"/>
+</svg>
