@@ -1,0 +1,11 @@
+repository: https://github.com/dmcarrington/android-mongo-client
+license: MIT
+metadata_sources:
+  - github
+images:
+  - ./screenshots/phone/phone1.png
+  - ./screenshots/phone/phone2.png
+  - ./screenshots/phone/phone3.png
+  - ./screenshots/phone/phone4.png
+  - ./screenshots/phone/phone5.png
+release_notes: ./CHANGELOG.md

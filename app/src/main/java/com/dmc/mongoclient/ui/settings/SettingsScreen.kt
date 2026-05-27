@@ -89,6 +89,27 @@ fun SettingsScreen(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
+            SectionHeader("Security")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Require authentication on open", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        "Lock the app behind your device's biometric or screen lock.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.requireAuthOnOpen,
+                    onCheckedChange = viewModel::setRequireAuthOnOpen,
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
             SectionHeader("About")
             Text("Sextant 0.1.0-spike", style = MaterialTheme.typography.bodyMedium)
             Text(

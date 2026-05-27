@@ -30,4 +30,8 @@ class SettingsViewModel @Inject constructor(
     fun setShowSystemDbsDefault(value: Boolean) {
         viewModelScope.launch { settings.setShowSystemDbsDefault(value) }
     }
+
+    fun setRequireAuthOnOpen(value: Boolean) {
+        viewModelScope.launch { settings.setRequireAuthOnOpen(value) }
+    }
 }

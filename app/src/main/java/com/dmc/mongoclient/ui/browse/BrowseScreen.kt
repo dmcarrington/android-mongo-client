@@ -1,7 +1,6 @@
 package com.dmc.mongoclient.ui.browse
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -84,6 +84,14 @@ fun BrowseScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var overflowOpen by remember { mutableStateOf(false) }
 
+    val widthClass = adaptiveInfo.windowSizeClass.windowWidthSizeClass
+    val isStacked = widthClass != WindowWidthSizeClass.EXPANDED
+
+    // Pane stack state for the stacked layouts (Compact + Medium). Lives at
+    // the screen level so both the top-bar back arrow and the system back
+    // handler can step through it consistently.
+    var compactPane by rememberSaveable { mutableStateOf(CompactPane.DATABASES) }
+
     LaunchedEffect(state.disconnected) {
         if (state.disconnected) onDisconnected()
     }
@@ -94,13 +102,37 @@ fun BrowseScreen(
         }
     }
 
+    val handleBack = rememberUpdatedState {
+        if (isStacked && compactPane != CompactPane.DATABASES) {
+            compactPane = when (compactPane) {
+                CompactPane.CONTENT -> CompactPane.COLLECTIONS
+                CompactPane.COLLECTIONS -> CompactPane.DATABASES
+                CompactPane.DATABASES -> CompactPane.DATABASES
+            }
+        } else {
+            viewModel.disconnect(onDisconnected)
+        }
+    }
+
+    // System back uses the same logic as the top-bar arrow.
+    BackHandler { handleBack.value() }
+
+    val onSelectDatabase: (String) -> Unit = { name ->
+        viewModel.selectDatabase(name)
+        if (isStacked) compactPane = CompactPane.COLLECTIONS
+    }
+    val onSelectCollection: (String) -> Unit = { name ->
+        viewModel.selectCollection(name)
+        if (isStacked) compactPane = CompactPane.CONTENT
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.selectedDatabase ?: "Browse") },
+                title = { Text(topBarTitle(state, isStacked, compactPane)) },
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.disconnect(onDisconnected) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Disconnect")
+                    IconButton(onClick = { handleBack.value() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -134,14 +166,24 @@ fun BrowseScreen(
                     onDisconnect = { viewModel.disconnect(onDisconnected) },
                 )
             }
-            BrowseLayout(
-                state = state,
-                widthClass = adaptiveInfo.windowSizeClass.windowWidthSizeClass,
-                onSelectDatabase = viewModel::selectDatabase,
-                onSelectCollection = viewModel::selectCollection,
-                onDropDatabase = { viewModel.requestDrop(DropTarget.Database(it.name)) },
-                onDropCollection = { db, col -> viewModel.requestDrop(DropTarget.Collection(db, col.name)) },
-            )
+            if (isStacked) {
+                StackedPanes(
+                    state = state,
+                    pane = compactPane,
+                    onSelectDatabase = onSelectDatabase,
+                    onSelectCollection = onSelectCollection,
+                    onDropDatabase = { viewModel.requestDrop(DropTarget.Database(it.name)) },
+                    onDropCollection = { db, col -> viewModel.requestDrop(DropTarget.Collection(db, col.name)) },
+                )
+            } else {
+                ThreePane(
+                    state = state,
+                    onSelectDatabase = onSelectDatabase,
+                    onSelectCollection = onSelectCollection,
+                    onDropDatabase = { viewModel.requestDrop(DropTarget.Database(it.name)) },
+                    onDropCollection = { db, col -> viewModel.requestDrop(DropTarget.Collection(db, col.name)) },
+                )
+            }
         }
     }
 
@@ -165,25 +207,12 @@ fun BrowseScreen(
     }
 }
 
-@Composable
-private fun BrowseLayout(
-    state: BrowseUiState,
-    widthClass: WindowWidthSizeClass,
-    onSelectDatabase: (String) -> Unit,
-    onSelectCollection: (String) -> Unit,
-    onDropDatabase: (com.dmc.mongoclient.domain.model.DatabaseSummary) -> Unit,
-    onDropCollection: (String, com.dmc.mongoclient.domain.model.CollectionSummary) -> Unit,
-) {
-    when (widthClass) {
-        WindowWidthSizeClass.EXPANDED -> ThreePane(
-            state, onSelectDatabase, onSelectCollection, onDropDatabase, onDropCollection,
-        )
-        // Medium fits a two-pane (dbs+collections) view but not three.
-        // Falling through to stacked keeps documents reachable; the dedicated
-        // dbs-as-dropdown design is deferred polish.
-        else -> StackedPanes(
-            state, onSelectDatabase, onSelectCollection, onDropDatabase, onDropCollection,
-        )
+private fun topBarTitle(state: BrowseUiState, stacked: Boolean, pane: CompactPane): String {
+    if (!stacked) return state.selectedDatabase ?: "Browse"
+    return when (pane) {
+        CompactPane.DATABASES -> "Databases"
+        CompactPane.COLLECTIONS -> state.selectedDatabase ?: "Collections"
+        CompactPane.CONTENT -> state.selectedCollection ?: state.selectedDatabase ?: "Browse"
     }
 }
 
@@ -226,38 +255,14 @@ private fun ThreePane(
 @Composable
 private fun StackedPanes(
     state: BrowseUiState,
+    pane: CompactPane,
     onSelectDatabase: (String) -> Unit,
     onSelectCollection: (String) -> Unit,
     onDropDatabase: (com.dmc.mongoclient.domain.model.DatabaseSummary) -> Unit,
     onDropCollection: (String, com.dmc.mongoclient.domain.model.CollectionSummary) -> Unit,
 ) {
-    var page by rememberSaveable { mutableStateOf(CompactPane.DATABASES) }
-
-    // When a selection is made, advance to the next pane. When selection clears,
-    // ensure we don't render a pane that has no data to show.
-    LaunchedEffect(state.selectedDatabase) {
-        if (state.selectedDatabase != null && page == CompactPane.DATABASES) {
-            page = CompactPane.COLLECTIONS
-        } else if (state.selectedDatabase == null) {
-            page = CompactPane.DATABASES
-        }
-    }
-    LaunchedEffect(state.selectedCollection) {
-        if (state.selectedCollection != null && page != CompactPane.CONTENT) {
-            page = CompactPane.CONTENT
-        }
-    }
-
-    BackHandler(enabled = page != CompactPane.DATABASES) {
-        page = when (page) {
-            CompactPane.CONTENT -> CompactPane.COLLECTIONS
-            CompactPane.COLLECTIONS -> CompactPane.DATABASES
-            CompactPane.DATABASES -> CompactPane.DATABASES
-        }
-    }
-
     Box(modifier = Modifier.fillMaxSize().fillMaxWidth()) {
-        when (page) {
+        when (pane) {
             CompactPane.DATABASES -> DatabaseListPane(
                 databases = state.databases,
                 selected = state.selectedDatabase,

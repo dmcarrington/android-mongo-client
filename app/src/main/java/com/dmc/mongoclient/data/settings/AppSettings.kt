@@ -15,6 +15,7 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 data class AppSettingsSnapshot(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val showSystemDbsDefault: Boolean = false,
+    val requireAuthOnOpen: Boolean = true,
 )
 
 private val Context.dataStore by preferencesDataStore(name = "app_settings")
@@ -28,6 +29,7 @@ class AppSettings @Inject constructor(
             themeMode = prefs[KEY_THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() }
                 ?: ThemeMode.SYSTEM,
             showSystemDbsDefault = prefs[KEY_SYSTEM_DBS] ?: false,
+            requireAuthOnOpen = prefs[KEY_REQUIRE_AUTH] ?: true,
         )
     }
 
@@ -39,8 +41,13 @@ class AppSettings @Inject constructor(
         context.dataStore.edit { it[KEY_SYSTEM_DBS] = value }
     }
 
+    suspend fun setRequireAuthOnOpen(value: Boolean) {
+        context.dataStore.edit { it[KEY_REQUIRE_AUTH] = value }
+    }
+
     private companion object {
         val KEY_THEME = stringPreferencesKey("theme_mode")
         val KEY_SYSTEM_DBS = booleanPreferencesKey("show_system_dbs_default")
+        val KEY_REQUIRE_AUTH = booleanPreferencesKey("require_auth_on_open")
     }
 }
