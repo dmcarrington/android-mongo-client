@@ -15,10 +15,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -75,6 +80,21 @@ fun DocumentsContent(
         }
     }
 
+    // SAF launchers — file picker callbacks deliver a URI to the VM which opens
+    // the in/out streams via ContentResolver.
+    val exportJsonLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> uri?.let(viewModel::exportJson) }
+    val exportCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv"),
+    ) { uri -> uri?.let(viewModel::exportCsv) }
+    val importJsonLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let(viewModel::importJson) }
+    val importCsvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let(viewModel::importCsv) }
+
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
@@ -89,11 +109,33 @@ fun DocumentsContent(
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when {
                 state.collection == null -> EmptyMessage("Select a collection")
-                state.mode is ContentMode.List -> DocumentList(state, viewModel)
+                state.mode is ContentMode.List -> DocumentList(
+                    state = state,
+                    vm = viewModel,
+                    onExportJson = { exportJsonLauncher.launch("${state.collection}.json") },
+                    onExportCsv = { exportCsvLauncher.launch("${state.collection}.csv") },
+                    onImportJson = { importJsonLauncher.launch(arrayOf("application/json", "*/*")) },
+                    onImportCsv = { importCsvLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "*/*")) },
+                )
                 state.mode is ContentMode.Detail -> DocumentDetail(state, viewModel)
                 state.mode is ContentMode.Edit -> DocumentEditor(state, viewModel)
             }
         }
+    }
+
+    if (state.ioInProgress) {
+        AlertDialog(
+            onDismissRequest = { /* block dismissal — io can't be cancelled */ },
+            title = { Text("Working…") },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator()
+                    Spacer(Modifier.width(16.dp))
+                    Text(state.ioStatus ?: "Please wait")
+                }
+            },
+            confirmButton = {},
+        )
     }
 
     state.pendingDelete?.let {
@@ -112,9 +154,16 @@ fun DocumentsContent(
 }
 
 @Composable
-private fun DocumentList(state: DocumentsUiState, vm: DocumentsViewModel) {
+private fun DocumentList(
+    state: DocumentsUiState,
+    vm: DocumentsViewModel,
+    onExportJson: () -> Unit,
+    onExportCsv: () -> Unit,
+    onImportJson: () -> Unit,
+    onImportCsv: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxSize()) {
-        QueryBar(state, vm)
+        QueryBar(state, vm, onExportJson, onExportCsv, onImportJson, onImportCsv)
         HorizontalDivider()
         StatusHeader(state)
         HorizontalDivider()
@@ -166,8 +215,16 @@ private fun formatCount(n: Long): String = java.text.NumberFormat.getInstance().
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QueryBar(state: DocumentsUiState, vm: DocumentsViewModel) {
+private fun QueryBar(
+    state: DocumentsUiState,
+    vm: DocumentsViewModel,
+    onExportJson: () -> Unit,
+    onExportCsv: () -> Unit,
+    onImportJson: () -> Unit,
+    onImportCsv: () -> Unit,
+) {
     var expanded by remember { mutableStateOf(true) }
+    var overflowOpen by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -177,6 +234,29 @@ private fun QueryBar(state: DocumentsUiState, vm: DocumentsViewModel) {
             Spacer(Modifier.weight(1f))
             Button(onClick = vm::runQuery, enabled = !state.loading) {
                 Text(if (state.loading) "…" else "Run")
+            }
+            Box {
+                IconButton(onClick = { overflowOpen = true }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "More")
+                }
+                DropdownMenu(expanded = overflowOpen, onDismissRequest = { overflowOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Export as JSON…") },
+                        onClick = { overflowOpen = false; onExportJson() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Export as CSV…") },
+                        onClick = { overflowOpen = false; onExportCsv() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Import from JSON…") },
+                        onClick = { overflowOpen = false; onImportJson() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Import from CSV…") },
+                        onClick = { overflowOpen = false; onImportCsv() },
+                    )
+                }
             }
         }
         if (expanded) {

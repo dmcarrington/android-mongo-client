@@ -1,5 +1,7 @@
 package com.dmc.mongoclient.ui.documents
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dmc.mongoclient.data.mongo.JsonFormat
@@ -8,7 +10,9 @@ import com.dmc.mongoclient.domain.model.DocumentRef
 import com.dmc.mongoclient.domain.model.FindPage
 import com.dmc.mongoclient.domain.model.FindRequest
 import com.dmc.mongoclient.domain.repo.DocumentRepository
+import com.dmc.mongoclient.domain.repo.ImportExportRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,11 +51,15 @@ data class DocumentsUiState(
     val saving: Boolean = false,
     val pendingDelete: DocumentRef? = null,
     val errorMessage: String? = null,
+    val ioInProgress: Boolean = false,
+    val ioStatus: String? = null,
 )
 
 @HiltViewModel
 class DocumentsViewModel @Inject constructor(
     private val repo: DocumentRepository,
+    private val importExport: ImportExportRepository,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DocumentsUiState())
@@ -275,4 +283,67 @@ class DocumentsViewModel @Inject constructor(
         _state.update { it.copy(errorMessage = null) }
     }
 
+    // ---------- Import / export ----------
+
+    fun exportJson(uri: Uri) = runIo("Exporting JSON…") {
+        val s = _state.value
+        val db = s.database ?: return@runIo "No collection selected"
+        val col = s.collection ?: return@runIo "No collection selected"
+        context.contentResolver.openOutputStream(uri)?.use { out ->
+            val result = importExport.exportJson(db, col, s.filterText, out)
+            "Exported ${result.exported} document(s) as JSON."
+        } ?: "Couldn't open the chosen file for writing."
+    }
+
+    fun exportCsv(uri: Uri) = runIo("Exporting CSV…") {
+        val s = _state.value
+        val db = s.database ?: return@runIo "No collection selected"
+        val col = s.collection ?: return@runIo "No collection selected"
+        context.contentResolver.openOutputStream(uri)?.use { out ->
+            val result = importExport.exportCsv(db, col, s.filterText, out)
+            "Exported ${result.exported} document(s) as CSV."
+        } ?: "Couldn't open the chosen file for writing."
+    }
+
+    fun importJson(uri: Uri) = runIo("Importing JSON…") {
+        val s = _state.value
+        val db = s.database ?: return@runIo "No collection selected"
+        val col = s.collection ?: return@runIo "No collection selected"
+        val result = context.contentResolver.openInputStream(uri)?.use { input ->
+            importExport.importJson(db, col, input)
+        } ?: return@runIo "Couldn't open the chosen file."
+        loadCurrentPage()
+        importSummary(result)
+    }
+
+    fun importCsv(uri: Uri) = runIo("Importing CSV…") {
+        val s = _state.value
+        val db = s.database ?: return@runIo "No collection selected"
+        val col = s.collection ?: return@runIo "No collection selected"
+        val result = context.contentResolver.openInputStream(uri)?.use { input ->
+            importExport.importCsv(db, col, input)
+        } ?: return@runIo "Couldn't open the chosen file."
+        loadCurrentPage()
+        importSummary(result)
+    }
+
+    private fun importSummary(r: com.dmc.mongoclient.domain.model.ImportResult): String {
+        val msg = StringBuilder("Imported ${r.inserted} document(s)")
+        if (r.errors.isNotEmpty()) {
+            msg.append(". ${r.errors.size} error(s): ${r.errors.first().take(120)}")
+        }
+        return "$msg."
+    }
+
+    private fun runIo(initialStatus: String, block: suspend () -> String) {
+        if (_state.value.ioInProgress) return
+        _state.update { it.copy(ioInProgress = true, ioStatus = initialStatus) }
+        viewModelScope.launch {
+            val finalStatus = runCatching { block() }
+                .getOrElse { t -> "Failed: ${t.toUserMessage()}" }
+            _state.update {
+                it.copy(ioInProgress = false, ioStatus = null, errorMessage = finalStatus)
+            }
+        }
+    }
 }

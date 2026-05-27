@@ -3,9 +3,11 @@ package com.dmc.mongoclient.di
 import com.dmc.mongoclient.data.repo.BrowseRepositoryImpl
 import com.dmc.mongoclient.data.repo.ConnectionRepositoryImpl
 import com.dmc.mongoclient.data.repo.DocumentRepositoryImpl
+import com.dmc.mongoclient.data.repo.ImportExportRepositoryImpl
 import com.dmc.mongoclient.domain.repo.BrowseRepository
 import com.dmc.mongoclient.domain.repo.ConnectionRepository
 import com.dmc.mongoclient.domain.repo.DocumentRepository
+import com.dmc.mongoclient.domain.repo.ImportExportRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -27,4 +29,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindDocumentRepository(impl: DocumentRepositoryImpl): DocumentRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindImportExportRepository(impl: ImportExportRepositoryImpl): ImportExportRepository
 }
