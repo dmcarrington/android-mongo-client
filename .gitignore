@@ -17,3 +17,5 @@ thoughts/
 
 # Keep gradle wrapper jar tracked once generated
 !gradle/wrapper/gradle-wrapper.jar
+
+.env

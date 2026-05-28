@@ -1,6 +1,7 @@
 repository: https://github.com/dmcarrington/android-mongo-client
 summary: Native MongoDB client for Android
 license: MIT
+icon: ./app/build/outputs/apk/release/app-release_icon.png
 images:
     - ./screenshots/phone/phone1.png
     - ./screenshots/phone/phone2.png
