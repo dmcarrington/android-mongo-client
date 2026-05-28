@@ -3,6 +3,8 @@ summary: Native MongoDB client for Android
 license: MIT
 icon: ./app/build/outputs/apk/release/app-release_icon.png
 images:
+    - ./screenshots/tablet/tablet-light.png
+    - ./screenshots/tablet/tablet-dark.png
     - ./screenshots/phone/phone1.png
     - ./screenshots/phone/phone2.png
     - ./screenshots/phone/phone3.png

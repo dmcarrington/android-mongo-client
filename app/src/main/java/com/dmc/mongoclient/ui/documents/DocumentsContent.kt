@@ -170,7 +170,7 @@ private fun DocumentList(
         Box(modifier = Modifier.fillMaxSize().weight(1f, fill = true)) {
             when {
                 state.loading && state.page == null -> Centered { CircularProgressIndicator() }
-                state.page == null -> EmptyMessage("Tap Run to fetch documents")
+                state.page == null -> EmptyMessage("Tap Find to fetch documents")
                 state.page!!.documents.isEmpty() -> EmptyMessage("No documents match")
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -223,50 +223,62 @@ private fun QueryBar(
     onImportJson: () -> Unit,
     onImportCsv: () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(true) }
+    var optionsOpen by remember { mutableStateOf(false) }
     var overflowOpen by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { expanded = !expanded }) {
-                Text(if (expanded) "Hide query" else "Show query")
-            }
-            Spacer(Modifier.weight(1f))
-            Button(onClick = vm::runQuery, enabled = !state.loading) {
-                Text(if (state.loading) "…" else "Run")
-            }
-            Box {
-                IconButton(onClick = { overflowOpen = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More")
-                }
-                DropdownMenu(expanded = overflowOpen, onDismissRequest = { overflowOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Export as JSON…") },
-                        onClick = { overflowOpen = false; onExportJson() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Export as CSV…") },
-                        onClick = { overflowOpen = false; onExportCsv() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Import from JSON…") },
-                        onClick = { overflowOpen = false; onImportJson() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Import from CSV…") },
-                        onClick = { overflowOpen = false; onImportCsv() },
-                    )
-                }
-            }
-        }
-        if (expanded) {
+        // Top row: Filter input on the left, Find + Options + overflow on the
+        // right. Vertical alignment Top so the buttons sit alongside the
+        // field's label rather than dragging the row tall when the field
+        // wraps.
+        Row(verticalAlignment = Alignment.Top) {
             JsonField(
                 label = "Filter",
                 value = state.filterText,
                 onChange = vm::setFilterText,
                 error = state.filterError,
                 placeholder = "{}",
+                modifier = Modifier.weight(1f),
             )
+            Spacer(Modifier.width(8.dp))
+            Column(
+                horizontalAlignment = Alignment.End,
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Button(onClick = vm::runQuery, enabled = !state.loading) {
+                        Text(if (state.loading) "…" else "Find")
+                    }
+                    Box {
+                        IconButton(onClick = { overflowOpen = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                        }
+                        DropdownMenu(expanded = overflowOpen, onDismissRequest = { overflowOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Export as JSON…") },
+                                onClick = { overflowOpen = false; onExportJson() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Export as CSV…") },
+                                onClick = { overflowOpen = false; onExportCsv() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Import from JSON…") },
+                                onClick = { overflowOpen = false; onImportJson() },
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Import from CSV…") },
+                                onClick = { overflowOpen = false; onImportCsv() },
+                            )
+                        }
+                    }
+                }
+                TextButton(onClick = { optionsOpen = !optionsOpen }) {
+                    Text(if (optionsOpen) "Hide options" else "Options")
+                }
+            }
+        }
+        if (optionsOpen) {
             JsonField(
                 label = "Projection",
                 value = state.projectionText,
@@ -293,6 +305,7 @@ private fun JsonField(
     onChange: (String) -> Unit,
     error: String?,
     placeholder: String,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     OutlinedTextField(
         value = value,
@@ -308,7 +321,7 @@ private fun JsonField(
             autoCorrectEnabled = false,
         ),
         textStyle = TextStyle(fontFamily = FontFamily.Monospace),
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        modifier = modifier.padding(top = 8.dp),
     )
 }
 
