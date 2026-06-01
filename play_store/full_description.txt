@@ -1,0 +1,41 @@
+Sextant is a native Android client for MongoDB. Connect directly to any deployment reachable over mongodb:// or mongodb+srv:// — Atlas, self-hosted, replica sets, or sharded clusters — and browse, query, and edit your data without a desktop in the loop.
+
+— Connection management —
+• Save multiple named connections; quickly switch between dev, staging, and production.
+• URIs (including any embedded password) are encrypted at rest using AES/GCM with a key held in the Android Keystore. The encryption key never leaves secure storage.
+• Show/hide password toggle in the connection editor, with live URI validation.
+• Test button to probe a connection without saving.
+
+— Browsing —
+• Database list with size on disk; toggle to show or hide system databases (admin/local/config).
+• Collection list with type chips for views and time-series collections, plus estimated document counts.
+• Compass-style type-to-confirm dialogs guard drop operations on databases and collections.
+
+— Documents —
+• Paginated find with skip/limit, prev/next pager, and a status header showing "Showing X–Y of N".
+• Filter, projection, and sort fields as raw JSON, with per-field inline parse error reporting.
+• Document detail view with syntax-highlighted, selectable JSON.
+• Full CRUD: insert with auto-generated ObjectId templates, edit with live JSON validation and Format button, delete with confirm.
+• BSON ↔ JSON round-trip via MongoDB Extended JSON v2 (RELAXED) — ObjectId, Date, Long, and friends render readably and survive edits.
+• Import and export documents from collections.
+
+— Indexes —
+• Read-only index list per collection.
+• Cards show name, keys with direction (↑/↓, or 2dsphere/text/hashed), and chips for unique, sparse, TTL, and partial indexes.
+• Tap to reveal the raw JSON index definition.
+
+— Adaptive UI for phone and tablet —
+• Three-pane layout on tablets (databases · collections · content); stacked nav on phones with proper back-handling.
+• Material 3 design with a hand-tuned blue-grey palette for light and dark modes.
+• Settings: theme picker (System/Light/Dark) and default system-databases visibility.
+• Connection-lost banner with in-place Reconnect — a flaky network doesn't bounce you back to the connection list.
+
+— Privacy —
+• No analytics, no tracking, no ads, no third-party SDKs.
+• Your connection URIs and preferences are stored on your device only.
+• The app communicates only with the MongoDB endpoints you configure — nothing is sent to the developer.
+
+— Not in this release —
+Aggregation pipeline builder, schema analysis, index create/drop, explain plans, GridFS, change streams, and multiple concurrent connections are deliberately out of scope for the initial release. Feedback welcome via the project repository.
+
+Sextant is open-source: https://github.com/dmcarrington/android-mongo-client

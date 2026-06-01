@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Play Store feature graphic. 1024x500, no transparency. Mirrors the listing
+  icon's blue-grey palette (#37474F family) with a subtle diagonal gradient,
+  the white sextant glyph on the right, and the wordmark + tagline on the
+  left. Critical content is kept ~80px from edges since Play sometimes
+  overlays a play button (YouTube preview) and the app icon on top.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#455A64"/>
+      <stop offset="100%" stop-color="#263238"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="500" fill="url(#bg)"/>
+
+  <!-- Sextant glyph, right-aligned. Source icon is 512x512; scale 0.7 → 358px. -->
+  <g transform="translate(610,71) scale(0.7)">
+    <path fill="#FFFFFF" fill-rule="evenodd"
+          d="M256,100 L96,412 L416,412 Z
+             M256,220 L180,392 L332,392 Z"/>
+    <path fill="#FFFFFF"
+          d="M246,110 L272,110 L404,400 L378,412 Z"/>
+    <circle fill="#FFFFFF" cx="256" cy="140" r="26"/>
+  </g>
+
+  <!-- Wordmark + tagline, left-aligned. -->
+  <text x="80" y="245"
+        font-family="DejaVu Sans, Liberation Sans, Helvetica, Arial, sans-serif"
+        font-size="120" font-weight="700" fill="#FFFFFF"
+        letter-spacing="-2">Sextant</text>
+  <text x="84" y="295"
+        font-family="DejaVu Sans, Liberation Sans, Helvetica, Arial, sans-serif"
+        font-size="26" font-weight="400" fill="#B0BEC5"
+        letter-spacing="1.5">NATIVE MONGODB CLIENT FOR ANDROID</text>
+</svg>
