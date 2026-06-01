@@ -4,11 +4,12 @@ All notable changes to Sextant are recorded here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 the project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.1.2] - 2026-06-01
 
-_Nothing yet._
+ - Fix silent failures when attempting to drop collections and databases. 
+ - Added ability to create new databases and collections.
 
-## [0.1.0] — 2026-05-26
+## [0.1.1] — 2026-05-26
 
 First release. Lean MVP of a native Android client for MongoDB, talking
 directly to any deployment reachable over `mongodb://` or `mongodb+srv://`
