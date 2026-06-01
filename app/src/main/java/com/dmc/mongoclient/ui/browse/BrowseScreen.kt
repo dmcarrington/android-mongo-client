@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.dmc.mongoclient.ui.common.CreateNameDialog
 import com.dmc.mongoclient.ui.common.TypeToConfirmDialog
 
 private enum class CompactPane { DATABASES, COLLECTIONS, CONTENT }
@@ -174,6 +175,8 @@ fun BrowseScreen(
                     onSelectCollection = onSelectCollection,
                     onDropDatabase = { viewModel.requestDrop(DropTarget.Database(it.name)) },
                     onDropCollection = { db, col -> viewModel.requestDrop(DropTarget.Collection(db, col.name)) },
+                    onAddDatabase = viewModel::requestCreateDatabase,
+                    onAddCollection = viewModel::requestCreateCollection,
                 )
             } else {
                 ThreePane(
@@ -182,6 +185,8 @@ fun BrowseScreen(
                     onSelectCollection = onSelectCollection,
                     onDropDatabase = { viewModel.requestDrop(DropTarget.Database(it.name)) },
                     onDropCollection = { db, col -> viewModel.requestDrop(DropTarget.Collection(db, col.name)) },
+                    onAddDatabase = viewModel::requestCreateDatabase,
+                    onAddCollection = viewModel::requestCreateCollection,
                 )
             }
         }
@@ -205,6 +210,26 @@ fun BrowseScreen(
             )
         }
     }
+
+    state.pendingCreate?.let { create ->
+        when (create) {
+            CreateTarget.Database -> CreateNameDialog(
+                title = "New database",
+                primaryLabel = "Database name",
+                // MongoDB databases don't exist until they contain at least
+                // one collection, so we collect both names in the same step.
+                secondaryLabel = "Initial collection name",
+                onConfirm = { db, coll -> viewModel.confirmCreate(db, coll!!) },
+                onDismiss = viewModel::cancelCreate,
+            )
+            is CreateTarget.Collection -> CreateNameDialog(
+                title = "New collection in \"${create.database}\"",
+                primaryLabel = "Collection name",
+                onConfirm = { coll, _ -> viewModel.confirmCreate(create.database, coll) },
+                onDismiss = viewModel::cancelCreate,
+            )
+        }
+    }
 }
 
 private fun topBarTitle(state: BrowseUiState, stacked: Boolean, pane: CompactPane): String {
@@ -223,6 +248,8 @@ private fun ThreePane(
     onSelectCollection: (String) -> Unit,
     onDropDatabase: (com.dmc.mongoclient.domain.model.DatabaseSummary) -> Unit,
     onDropCollection: (String, com.dmc.mongoclient.domain.model.CollectionSummary) -> Unit,
+    onAddDatabase: () -> Unit,
+    onAddCollection: () -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
         DatabaseListPane(
@@ -231,6 +258,7 @@ private fun ThreePane(
             loading = state.loadingDatabases,
             onSelect = onSelectDatabase,
             onLongPress = onDropDatabase,
+            onAdd = onAddDatabase,
             modifier = Modifier.width(280.dp),
         )
         VerticalDivider()
@@ -241,6 +269,7 @@ private fun ThreePane(
             loading = state.loadingCollections,
             onSelect = onSelectCollection,
             onLongPress = { col -> state.selectedDatabase?.let { onDropCollection(it, col) } },
+            onAdd = onAddCollection,
             modifier = Modifier.width(320.dp),
         )
         VerticalDivider()
@@ -260,6 +289,8 @@ private fun StackedPanes(
     onSelectCollection: (String) -> Unit,
     onDropDatabase: (com.dmc.mongoclient.domain.model.DatabaseSummary) -> Unit,
     onDropCollection: (String, com.dmc.mongoclient.domain.model.CollectionSummary) -> Unit,
+    onAddDatabase: () -> Unit,
+    onAddCollection: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize().fillMaxWidth()) {
         when (pane) {
@@ -269,6 +300,7 @@ private fun StackedPanes(
                 loading = state.loadingDatabases,
                 onSelect = onSelectDatabase,
                 onLongPress = onDropDatabase,
+                onAdd = onAddDatabase,
                 modifier = Modifier.fillMaxSize(),
             )
             CompactPane.COLLECTIONS -> CollectionListPane(
@@ -278,6 +310,7 @@ private fun StackedPanes(
                 loading = state.loadingCollections,
                 onSelect = onSelectCollection,
                 onLongPress = { col -> state.selectedDatabase?.let { onDropCollection(it, col) } },
+                onAdd = onAddCollection,
                 modifier = Modifier.fillMaxSize(),
             )
             CompactPane.CONTENT -> CollectionContent(

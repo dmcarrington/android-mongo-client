@@ -24,6 +24,13 @@ sealed interface DropTarget {
     data class Collection(val database: String, val name: String) : DropTarget
 }
 
+sealed interface CreateTarget {
+    /** New database — needs both a database name and an initial collection name. */
+    data object Database : CreateTarget
+    /** New collection inside an already-existing database. */
+    data class Collection(val database: String) : CreateTarget
+}
+
 data class BrowseUiState(
     val loadingDatabases: Boolean = false,
     val loadingCollections: Boolean = false,
@@ -33,6 +40,7 @@ data class BrowseUiState(
     val selectedCollection: String? = null,
     val showSystemDbs: Boolean = false,
     val pendingDrop: DropTarget? = null,
+    val pendingCreate: CreateTarget? = null,
     val errorMessage: String? = null,
     /** True when the active MongoClient has gone away (process death or explicit disconnect). */
     val disconnected: Boolean = false,
@@ -124,25 +132,62 @@ class BrowseViewModel @Inject constructor(
         val target = _state.value.pendingDrop ?: return
         _state.update { it.copy(pendingDrop = null) }
         viewModelScope.launch {
-            runCatching {
+            val outcome = runCatching {
                 when (target) {
                     is DropTarget.Database -> browseRepo.dropDatabase(target.name)
                     is DropTarget.Collection -> browseRepo.dropCollection(target.database, target.name)
                 }
-            }.onFailure { t ->
+            }
+            outcome.onFailure { t ->
+                // refreshDatabases() clears errorMessage at its start; that update
+                // and this one collapse on the same tick under StateFlow conflation,
+                // so the snackbar never sees the error. Surface and bail.
                 _state.update {
                     it.copy(errorMessage = t.toUserMessage(), connectionLost = t.isConnectionLost() || it.connectionLost)
                 }
+                return@launch
             }
             refreshDatabases()
-            // If we just dropped the currently-open database, clear its collections.
             if (target is DropTarget.Database && _state.value.selectedDatabase == target.name) {
                 _state.update {
                     it.copy(selectedDatabase = null, selectedCollection = null, collections = emptyList())
                 }
             } else if (_state.value.selectedDatabase != null) {
-                // Refresh collections for the still-selected database.
                 selectDatabaseForceReload(_state.value.selectedDatabase!!)
+            }
+        }
+    }
+
+    fun requestCreateDatabase() {
+        _state.update { it.copy(pendingCreate = CreateTarget.Database) }
+    }
+
+    fun requestCreateCollection() {
+        val db = _state.value.selectedDatabase ?: return
+        _state.update { it.copy(pendingCreate = CreateTarget.Collection(db)) }
+    }
+
+    fun cancelCreate() {
+        _state.update { it.copy(pendingCreate = null) }
+    }
+
+    fun confirmCreate(databaseName: String, collectionName: String) {
+        val target = _state.value.pendingCreate ?: return
+        _state.update { it.copy(pendingCreate = null) }
+        viewModelScope.launch {
+            val outcome = runCatching {
+                browseRepo.createCollection(databaseName, collectionName)
+            }
+            outcome.onFailure { t ->
+                _state.update {
+                    it.copy(errorMessage = t.toUserMessage(), connectionLost = t.isConnectionLost() || it.connectionLost)
+                }
+                return@launch
+            }
+            refreshDatabases()
+            when (target) {
+                is CreateTarget.Database -> selectDatabase(databaseName)
+                is CreateTarget.Collection -> selectDatabaseForceReload(databaseName)
             }
         }
     }

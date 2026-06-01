@@ -12,8 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,9 +38,15 @@ fun DatabaseListPane(
     loading: Boolean,
     onSelect: (String) -> Unit,
     onLongPress: (DatabaseSummary) -> Unit,
+    onAdd: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    PaneFrame(modifier = modifier, title = "Databases") {
+    PaneFrame(
+        modifier = modifier,
+        title = "Databases",
+        onAdd = onAdd,
+        addContentDescription = "New database",
+    ) {
         when {
             loading && databases.isEmpty() -> Centered { CircularProgressIndicator() }
             databases.isEmpty() -> Centered { Text("No databases", style = MaterialTheme.typography.bodyMedium) }
@@ -63,9 +73,16 @@ fun CollectionListPane(
     loading: Boolean,
     onSelect: (String) -> Unit,
     onLongPress: (CollectionSummary) -> Unit,
+    onAdd: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    PaneFrame(modifier = modifier, title = database ?: "Collections") {
+    PaneFrame(
+        modifier = modifier,
+        title = database ?: "Collections",
+        // No add button until a database is selected — collections need one.
+        onAdd = if (database != null) onAdd else null,
+        addContentDescription = "New collection",
+    ) {
         when {
             database == null -> Centered {
                 Text("Select a database", style = MaterialTheme.typography.bodyMedium)
@@ -178,15 +195,31 @@ private fun CollectionRow(
 }
 
 @Composable
-private fun PaneFrame(modifier: Modifier, title: String, content: @Composable () -> Unit) {
+private fun PaneFrame(
+    modifier: Modifier,
+    title: String,
+    onAdd: (() -> Unit)? = null,
+    addContentDescription: String? = null,
+    content: @Composable () -> Unit,
+) {
     Column(modifier = modifier.fillMaxSize()) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            overflow = TextOverflow.Ellipsis,
-            maxLines = 1,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f).padding(vertical = 8.dp),
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+            )
+            if (onAdd != null) {
+                IconButton(onClick = onAdd) {
+                    Icon(Icons.Default.Add, contentDescription = addContentDescription)
+                }
+            }
+        }
         HorizontalDivider()
         Box(modifier = Modifier.fillMaxSize(), content = { content() })
     }

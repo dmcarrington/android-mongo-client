@@ -26,6 +26,7 @@ fun Throwable.toUserMessage(): String = when (this) {
     is MongoCommandException -> when (errorCode) {
         11000, 11001 -> "Duplicate key — a document with that _id (or unique-indexed value) already exists."
         13 -> "Not authorised to perform that action on this resource."
+        48 -> "A collection with that name already exists."
         else -> errorMessage.ifBlank { "Server error: $errorCode" }
     }
     is MongoServerException ->

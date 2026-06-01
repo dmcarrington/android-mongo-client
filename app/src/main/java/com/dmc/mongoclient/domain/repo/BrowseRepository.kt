@@ -16,4 +16,12 @@ interface BrowseRepository {
     suspend fun dropDatabase(database: String)
 
     suspend fun dropCollection(database: String, collection: String)
+
+    /**
+     * Creates [collection] under [database]. Because MongoDB databases don't
+     * exist independently of their collections, this is also the operation
+     * used to materialise a brand-new database — pass a fresh database name
+     * with an initial collection name.
+     */
+    suspend fun createCollection(database: String, collection: String)
 }

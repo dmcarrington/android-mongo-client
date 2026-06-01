@@ -72,6 +72,11 @@ class BrowseRepositoryImpl @Inject constructor(
             requireClient().getDatabase(database).getCollection<Document>(collection).drop()
         }
 
+    override suspend fun createCollection(database: String, collection: String) =
+        withContext(Dispatchers.IO) {
+            requireClient().getDatabase(database).createCollection(collection)
+        }
+
     private fun requireClient(): MongoClient =
         clientHolder.activeClient() ?: error("No active MongoClient")
 

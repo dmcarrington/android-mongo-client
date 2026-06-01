@@ -19,3 +19,4 @@ thoughts/
 !gradle/wrapper/gradle-wrapper.jar
 
 .env
+play_store/
